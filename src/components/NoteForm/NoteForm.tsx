@@ -4,6 +4,10 @@ import type { FormikHelpers } from "formik";
 import { useId } from "react";
 import * as Yup from "yup";
 import type { NoteTag } from "../../types/note";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { createNote } from "../../services/noteService";
+import toast from "react-hot-toast";
+
 
 export interface NoteFormValues{
     title: string,
@@ -18,7 +22,6 @@ const initialValues: NoteFormValues = {
 }
 
 interface NoteFormProps{
-    onSubmit: (values: NoteFormValues) => void;
     onCancel: () => void;
 }
 
@@ -35,14 +38,27 @@ const noteFormSchema = Yup.object().shape({
 });
 
 
-export function NoteForm({onSubmit, onCancel}: NoteFormProps) {
+export function NoteForm({ onCancel }: NoteFormProps) {
     const fieldId = useId();
+    const queryClient = useQueryClient();
+
+    const { mutate } = useMutation({
+        mutationFn: createNote,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["notes"] });
+            toast.success("Note was created successfully!");
+            onCancel();
+        },
+        onError: () => {
+            toast.error("Cannot create a note now. Please try later.");
+        }
+    });
 
     const handleSubmit = (
         values: NoteFormValues,
         actions: FormikHelpers<NoteFormValues>
     ) => {
-        onSubmit(values);
+        mutate(values);
         actions.resetForm();
     };
 
